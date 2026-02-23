@@ -1,0 +1,25 @@
+# Data — never commit CSVs
+*.csv
+*.xlsx
+*.xls
+
+# Output
+output/
+
+# Saved configs (may contain file paths)
+config_*.yaml
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
