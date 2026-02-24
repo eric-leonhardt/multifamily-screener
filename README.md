@@ -1,83 +1,88 @@
-# rent-model
+# Multifamily Investment Screener
 
-Interactive LASSO regression pipeline for identifying undervalued multifamily rental properties. Point it at any Yardi Matrix CSV export and it walks you through selecting a submarket, features, and landmarks — then runs the full analysis.
+AI-powered tool for identifying undervalued multifamily rental properties. Upload your data, chat naturally, and get a full LASSO regression analysis with acquisition targets — no coding required.
+
+**[→ Try the live app](https://multifamily-screener-ai.streamlit.app/)**
 
 <p align="center">
-  <img src="assets/map_example.png" alt="Example output: Midtown West submarket map with acquisition targets" width="700">
+  <img src="assets/map_example.png" alt="Submarket map with acquisition targets" width="700">
   <br>
-  <em>Example output — properties colored by model residual (red = under-rented acquisition targets)</em>
+  <em>Properties colored by model residual — red = under-rented acquisition targets</em>
 </p>
+
+## How It Works
+
+The app uses Claude (Anthropic's LLM) as a conversational layer on top of a LASSO regression pipeline. Upload a CSV of property-level rent data (Yardi Matrix, CoStar, or similar), and Claude walks you through the analysis:
+
+1. **Inspects your data** — identifies columns, submarkets, and feature types automatically
+2. **Guides feature selection** — suggests which variables to include based on what's in your dataset
+3. **Engineers distance features** — computes Haversine distances to landmarks you specify
+4. **Runs cross-validated LASSO** — automatic variable selection with L1 regularization
+5. **Ranks variable importance** — partial R² measures each feature's unique contribution
+6. **Identifies acquisition targets** — properties renting significantly below model-predicted values
+7. **Explains everything in plain English** — what the model found, why it matters, and what to look at
 
 ## Quick Start
 
+### AI Chat App (recommended)
+
 ```bash
-pip install numpy pandas scikit-learn pyyaml matplotlib
+pip install -r requirements.txt
+streamlit run app.py
+```
 
-# Optional: for census block map backgrounds
-pip install geopandas
+Paste your [Anthropic API key](https://console.anthropic.com/) in the sidebar, upload a CSV, and start chatting.
 
-# Run interactively
+### CLI (no API key needed)
+
+```bash
 python run_analysis.py
 ```
 
-The CLI will prompt you for:
-
-1. **CSV path** — your Yardi Matrix data export
-2. **Submarket** — auto-detects the column and lists available submarkets
-3. **Column mapping** — auto-detects common column names (PropertyID, Latitude, etc.)
-4. **Features** — auto-classifies columns as binary, numeric, or categorical; you pick which to include
-5. **Landmarks** — enter name + lat/lon for local amenities (distances computed via Haversine)
-6. **Model settings** — CV folds, number of targets
-7. **Map background** — optional state/county FIPS for census block outlines
-
-At the end, you can **save your config as YAML** and rerun without prompts:
+The CLI walks you through the same analysis interactively in the terminal. Save your config as YAML to rerun without prompts:
 
 ```bash
-python run_analysis.py --config my_saved_config.yaml
+python run_analysis.py --config my_config.yaml
 ```
 
-## What It Does
+## Architecture
 
-1. Filters to your target submarket
-2. Engineers features: distances to landmarks, binary amenity encoding, categorical dummies, computed variables (rent/sqft, parking/unit)
-3. Runs cross-validated LASSO with automatic variable selection
-4. Ranks variable importance via partial R² (drop-one analysis)
-5. Identifies acquisition targets — properties charging well below model-predicted rent
-6. Generates a map with properties colored by residual and labeled landmarks
+```
+User (chat) → Streamlit → Claude API (tool-use)
+                               ↓
+                          tools.py (pipeline functions)
+                               ↓
+                          Claude interprets & explains
+                               ↓
+                          User (plain English + map)
+```
 
-## Output
+Claude has access to four tools:
 
-All saved to `output/`:
-
-| File | Description |
-|------|-------------|
-| `results.csv` | Every property with predicted rent, residual, % below market |
-| `variable_importance.csv` | Non-zero LASSO coefficients ranked by partial R² |
-| `acquisition_targets.csv` | Top N most under-rented properties |
-| `submarket_map.png` | Scatter map (with optional census block grid) |
+| Tool | Purpose |
+|------|---------|
+| `inspect_data` | Understand dataset structure |
+| `list_submarkets` | Show available submarkets with property counts |
+| `describe_columns` | Auto-classify features (binary, numeric, categorical) |
+| `run_analysis` | Full LASSO pipeline — model, importance, targets, map |
 
 ## Project Structure
 
 ```
-rent-model/
-├── run_analysis.py    # Main pipeline + interactive CLI
-├── utils.py           # Haversine, encoding, imputation, column classification
-└── README.md
+├── app.py              # Streamlit chat interface (AI version)
+├── tools.py            # Pipeline functions as Claude tool calls
+├── run_analysis.py     # Standalone CLI version
+├── utils.py            # Haversine, encoding, imputation helpers
+├── requirements.txt
+└── assets/
+    └── map_example.png
 ```
 
 ## Requirements
 
 - Python 3.8+
-- numpy, pandas, scikit-learn, pyyaml, matplotlib
-- geopandas (optional — enables census block map background)
-
-## How It Works
-
-The model predicts **rent per square foot** as a function of building attributes, amenities, utility structures, and distances to local landmarks. LASSO regularization (L1 penalty) performs automatic variable selection, shrinking irrelevant coefficients to zero.
-
-**Acquisition targets** are properties with the most negative residuals — they charge significantly less than the model predicts given their attributes. This flags potential upside under repositioning, though site-level diligence is always required.
-
-**Variable importance** uses partial R²: for each selected variable, the model is refit without it, and the drop in R² measures that variable's unique contribution.
+- Anthropic API key (for the chat app)
+- See `requirements.txt` for packages
 
 ## License
 
